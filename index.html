@@ -2,25 +2,22 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
+  <title>Earnigram Tasks</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Earnigram Task Viewer</title>
   <style>
     body {
-      font-family: Arial, sans-serif;
-      background: #f0f2f5;
-      margin: 0;
+      font-family: sans-serif;
+      background: #f5f5f5;
       padding: 20px;
     }
     h1 {
       text-align: center;
-      color: #333;
     }
     button {
       display: block;
       margin: 20px auto;
       padding: 10px 20px;
       font-size: 16px;
-      cursor: pointer;
     }
     .task {
       background: #fff;
@@ -28,12 +25,14 @@
       padding: 15px;
       max-width: 600px;
       border-radius: 8px;
-      box-shadow: 0 0 8px rgba(0,0,0,0.1);
+      box-shadow: 0 0 5px rgba(0,0,0,0.1);
     }
     .task a {
-      text-decoration: none;
       color: #007bff;
-      font-weight: bold;
+      text-decoration: none;
+    }
+    .task a:hover {
+      text-decoration: underline;
     }
   </style>
 </head>
@@ -47,16 +46,17 @@
       const container = document.getElementById("taskContainer");
       container.innerHTML = "⏳ Fetching tasks...";
       try {
-        const res = await fetch("https://86ecde7c-eaa7-4c94-a49e-5f0cd12f4213-00-a9zqq45bcsvk.janeway.replit.dev/run?count=3");
-        const data = await res.json();
+        await fetch("https://86ecde7c-eaa7-4c94-a49e-5f0cd12f4213-00-a9zqq45bcsvk.janeway.replit.dev/run?count=3")
+        const result = await res.json();
         container.innerHTML = "";
-        data.forEach(item => {
-          if (item.tasks && item.tasks.length) {
-            item.tasks.forEach(task => {
+
+        result.forEach((loopResult, index) => {
+          if (loopResult.tasks && loopResult.tasks.length) {
+            loopResult.tasks.forEach(task => {
               const div = document.createElement("div");
               div.className = "task";
               div.innerHTML = `
-                ✅ <strong>${task.title}</strong><br/>
+                <strong>✅ ${task.title}</strong><br>
                 🔗 <a href="${task.url}" target="_blank">${task.url}</a>
               `;
               container.appendChild(div);
@@ -64,13 +64,13 @@
           } else {
             const div = document.createElement("div");
             div.className = "task";
-            div.innerText = `❌ Loop ${item.loop}: ${item.error}`;
+            div.innerHTML = `❌ No tasks found in loop ${loopResult.loop}`;
             container.appendChild(div);
           }
         });
-      } catch (err) {
+      } catch (error) {
         container.innerHTML = "❌ Error fetching tasks.";
-        console.error(err);
+        console.error("Fetch error:", error);
       }
     }
   </script>
