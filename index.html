@@ -2,75 +2,84 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Earnigram Tasks</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Earnigram Runner</title>
   <style>
-    body {
-      font-family: sans-serif;
-      background: #f5f5f5;
-      padding: 20px;
-    }
-    h1 {
-      text-align: center;
-    }
-    button {
-      display: block;
-      margin: 20px auto;
-      padding: 10px 20px;
-      font-size: 16px;
-    }
-    .task {
-      background: #fff;
-      margin: 10px auto;
-      padding: 15px;
-      max-width: 600px;
-      border-radius: 8px;
-      box-shadow: 0 0 5px rgba(0,0,0,0.1);
-    }
-    .task a {
-      color: #007bff;
-      text-decoration: none;
-    }
-    .task a:hover {
-      text-decoration: underline;
-    }
+    body { font-family: Arial, sans-serif; padding: 20px; background: #f5f5f5; }
+    h2 { color: #333; }
+    input, button { padding: 10px; margin: 5px 0; width: 100%; }
+    #log { white-space: pre-wrap; background: #fff; padding: 10px; border: 1px solid #ccc; height: 200px; overflow-y: scroll; }
   </style>
 </head>
 <body>
-  <h1>🟢 Earnigram Tasks</h1>
-  <button onclick="fetchTasks()">Fetch Tasks</button>
-  <div id="taskContainer"></div>
+  <h2>Earnigram Task Runner</h2>
+  <label>Data Check String:</label>
+  <input type="text" id="dataCheck" placeholder="Paste your data_check_string here" />
+  <label>Number of Loops:</label>
+  <input type="number" id="loopCount" placeholder="Enter number of loops" />
+  <button onclick="start()">Start</button>
+  <h3>Logs:</h3>
+  <div id="log"></div>
 
   <script>
-    async function fetchTasks() {
-      const container = document.getElementById("taskContainer");
-      container.innerHTML = "⏳ Fetching tasks...";
-      try {
-        await fetch("https://86ecde7c-eaa7-4c94-a49e-5f0cd12f4213-00-a9zqq45bcsvk.janeway.replit.dev/run?count=3")
-        const result = await res.json();
-        container.innerHTML = "";
+    const TELEGRAM_AUTH_HEADER = `Telegram-Auth: user=%7B%22id%22%3A280349557%2C%22first_name%22%3A%22Adam%22%2C%22last_name%22%3A%22Alberto%22%2C%22username%22%3A%22didoAlberto007%22%2C%22language_code%22%3A%22fr%22%2C%22allows_write_to_pm%22%3Atrue%2C%22photo_url%22%3A%22https%3A%5C%2F%5C%2Ft.me%5C%2Fi%5C%2Fuserpic%5C%2F320%5C%2FsOe-P6HshiWoVQtXFmQL403TRrNPf4TOVmg3sjUJ2dI.svg%22%7D&chat_instance=1162476353204180240&chat_type=sender&auth_date=1752075375&signature=jaRmYAVzB6q83dEyUffV3swm31H2CAgJkFkauHzm0REF8S80z3Y3__n9hHSeWOoUPNBl1uIS-2xVtrmGS0R6CQ&hash=30a89be2dad67445001f33ec9024359926c05b3023df8053a9f7eb0af5668f38`;
 
-        result.forEach((loopResult, index) => {
-          if (loopResult.tasks && loopResult.tasks.length) {
-            loopResult.tasks.forEach(task => {
-              const div = document.createElement("div");
-              div.className = "task";
-              div.innerHTML = `
-                <strong>✅ ${task.title}</strong><br>
-                🔗 <a href="${task.url}" target="_blank">${task.url}</a>
-              `;
-              container.appendChild(div);
-            });
-          } else {
-            const div = document.createElement("div");
-            div.className = "task";
-            div.innerHTML = `❌ No tasks found in loop ${loopResult.loop}`;
-            container.appendChild(div);
+    function log(text) {
+      const logBox = document.getElementById("log");
+      logBox.textContent += text + "\n";
+      logBox.scrollTop = logBox.scrollHeight;
+    }
+
+    async function start() {
+      const dataCheck = document.getElementById("dataCheck").value.trim();
+      const loops = parseInt(document.getElementById("loopCount").value);
+      if (!dataCheck || isNaN(loops) || loops <= 0) {
+        alert("Please enter valid data_check_string and number of loops.");
+        return;
+      }
+
+      for (let i = 1; i <= loops; i++) {
+        log(`🔄 Loop ${i} started...`);
+
+        // Step 1: Get Task
+        const advUrl = `https://api.adsgram.ai/adv?envType=telegram&blockId=11038&platform=Linux+i686&language=fr&chat_type=sender&chat_instance=1162476353204180240&top_domain=tgapp.earnigram.com&signature=jaRmYAVzB6q83dEyUffV3swm31H2CAgJkFkauHzm0REF8S80z3Y3__n9hHSeWOoUPNBl1uIS-2xVtrmGS0R6CQ&data_check_string=${encodeURIComponent(dataCheck)}&sdk_version=1.25.1&tg_id=280349557&tg_platform=android&tma_version=9.0`;
+
+        let record;
+        try {
+          const advRes = await fetch(advUrl, {
+            headers: { Referer: "tgapp.earnigram.com" },
+          });
+          const advJson = await advRes.json();
+          record = advJson?.banners?.[0]?.banner?.trackings?.find(x => x.name === "reward")?.value?.split("record=")[1]?.split("&")[0];
+          if (!record) throw new Error("Record token not found.");
+          log(`✅ Record token received.`);
+        } catch (e) {
+          log(`❌ Failed to get task: ${e.message}`);
+          return;
+        }
+
+        // Step 2: Send Reward
+        try {
+          const rewardUrl = `https://api.adsgram.ai/event?record=${encodeURIComponent(record)}&type=reward&trackingtypeid=14`;
+          const rewardRes = await fetch(rewardUrl);
+          if (!rewardRes.ok) throw new Error("Reward call failed");
+          log(`🏆 Reward claimed.`);
+        } catch (e) {
+          log(`❌ Failed to send reward: ${e.message}`);
+          return;
+        }
+      }
+
+      // Step 3: Get Balance
+      try {
+        const balanceRes = await fetch("https://api.earnigram.com/balance/get_balance", {
+          headers: {
+            "Telegram-Auth": TELEGRAM_AUTH_HEADER
           }
         });
-      } catch (error) {
-        container.innerHTML = "❌ Error fetching tasks.";
-        console.error("Fetch error:", error);
+        const balanceJson = await balanceRes.json();
+        log(`\n💰 Final Balance: ${balanceJson.available_to_withdraw}`);
+      } catch (e) {
+        log(`❌ Failed to get balance: ${e.message}`);
       }
     }
   </script>
